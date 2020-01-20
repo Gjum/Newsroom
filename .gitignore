@@ -1,0 +1,12 @@
+/.gradle
+/build/
+/out/
+/target/
+*.class
+*.jar
+*.log
+*.log.gz
+*.log.lck
+.*
+*.sqlite
+*.db
