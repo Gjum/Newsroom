@@ -1,0 +1,15 @@
+[Unit]
+Description=Newsroom Discord Bot
+After=syslog.target network.target nss-lookup.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+ExecStart=/home/newsroom-bot/newsroom/start.sh
+EnvironmentFile=/home/newsroom-bot/newsroom/.env
+WorkingDirectory=/home/newsroom-bot/newsroom/
+User=newsroom-bot
+Group=newsroom-bot
+Restart=always
+RestartSec=0
