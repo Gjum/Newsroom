@@ -153,7 +153,7 @@ class Discord(private val db: Database) : ListenerAdapter() {
 		if (event.channel.id != starChannelId && (emoteName == Emotes.star || emoteName == Emotes.joy || emoteName.all(Char::isLetterOrDigit))) {
 			val starredMsg = event.channel.retrieveMessageById(event.reaction.messageId).complete()
 			val reaction = starredMsg.reactions.firstOrNull { it.reactionEmote.name == emoteName } ?: return
-			if (reaction.count >= 3) {
+			if (reaction.count >= 4) {
 				starChannelId ?: return
 				val starChannel = jda.getGuildChannelById(starChannelId)
 				if (starChannel !is TextChannel) return // misconfigured
