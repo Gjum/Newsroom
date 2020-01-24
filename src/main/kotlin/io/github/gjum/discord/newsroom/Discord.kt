@@ -1,6 +1,7 @@
 package io.github.gjum.discord.newsroom
 
 import com.sun.istack.internal.logging.Logger
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.PrivateChannel
@@ -9,13 +10,20 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import java.awt.Color
 
 private val logger = Logger.getLogger(Discord::class.java)
+
+object Emotes {
+	const val star = "⭐"
+	const val joy = "\uD83D\uDE02"
+}
 
 class Discord(private val db: Database) : ListenerAdapter() {
 	private val cmdPrefix = System.getenv("DISCORD_CMD_PREFIX") ?: "!"
 	private val commands = mutableMapOf<String, Command>()
 	private val reactionHandlers = mutableMapOf<String, ReactionAddHandler>()
+	private val starChannelId = System.getenv("STAR_CHANNEL_ID") ?: null
 
 	private var jda = JDABuilder(System.getenv("DISCORD_TOKEN")
 		?: error("You must set the DISCORD_TOKEN environment variable"))
@@ -137,6 +145,35 @@ class Discord(private val db: Database) : ListenerAdapter() {
 		if (handler != null && event.messageId == handler.messageId) {
 			reactionHandlers.remove(event.user.id)
 			handler.accept(event)
+			return
+		}
+		val emoteName = event.reactionEmote.name
+		if (event.channel.id != starChannelId && (emoteName == Emotes.star || emoteName == Emotes.joy || emoteName.all(Char::isLetterOrDigit))) {
+			val starredMsg = event.channel.retrieveMessageById(event.reaction.messageId).complete()
+			val reaction = starredMsg.reactions.firstOrNull { it.reactionEmote.name == emoteName } ?: return
+			if (reaction.count >= 3) {
+				starChannelId ?: return
+				val starChannel = jda.getGuildChannelById(starChannelId)
+				if (starChannel !is TextChannel) return // misconfigured
+				val reactUsers = event.reaction.retrieveUsers().complete()
+				if (reactUsers.contains(jda.selfUser)) {
+					return // already posted to starChannel
+				}
+				event.channel.addReactionById(event.messageId, Emotes.star).complete()
+				val embed = EmbedBuilder()
+					.setColor(Color.YELLOW)
+					.setAuthor(starredMsg.author.asTag, starredMsg.jumpUrl, starredMsg.author.avatarUrl)
+					.setDescription(starredMsg.contentRaw)
+					.setTimestamp(starredMsg.timeCreated)
+				starredMsg.attachments.firstOrNull { it.isImage }
+					?.also { embed.setImage(it.url) }
+				if (event.reactionEmote.isEmote) {
+					val emote = event.guild.retrieveEmote(event.reactionEmote.emote).complete()
+					if (emote != null) embed.setFooter(" ", emote.imageUrl)
+				}
+				starChannel.sendMessage(embed.build()).queue()
+			}
+			return
 		}
 	}
 
