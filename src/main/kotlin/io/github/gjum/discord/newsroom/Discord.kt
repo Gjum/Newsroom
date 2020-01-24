@@ -19,6 +19,8 @@ object Emotes {
 	const val joy = "\uD83D\uDE02"
 }
 
+private const val zeroWidthSpace = "\u200B"
+
 class Discord(private val db: Database) : ListenerAdapter() {
 	private val cmdPrefix = System.getenv("DISCORD_CMD_PREFIX") ?: "!"
 	private val commands = mutableMapOf<String, Command>()
@@ -169,7 +171,7 @@ class Discord(private val db: Database) : ListenerAdapter() {
 					?.also { embed.setImage(it.url) }
 				if (event.reactionEmote.isEmote) {
 					val emote = event.guild.retrieveEmote(event.reactionEmote.emote).complete()
-					if (emote != null) embed.setFooter(" ", emote.imageUrl)
+					if (emote != null) embed.setFooter(zeroWidthSpace, emote.imageUrl)
 				}
 				starChannel.sendMessage(embed.build()).queue()
 			}
