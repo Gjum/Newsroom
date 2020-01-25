@@ -149,33 +149,40 @@ class Discord(private val db: Database) : ListenerAdapter() {
 			handler.accept(event)
 			return
 		}
-		val emoteName = event.reactionEmote.name
-		if (event.channel.id != starChannelId && (emoteName == Emotes.star || emoteName == Emotes.joy || emoteName.all(Char::isLetterOrDigit))) {
-			val starredMsg = event.channel.retrieveMessageById(event.reaction.messageId).complete()
-			val reaction = starredMsg.reactions.firstOrNull { it.reactionEmote.name == emoteName } ?: return
-			if (reaction.count >= 4) {
-				starChannelId ?: return
-				val starChannel = jda.getGuildChannelById(starChannelId)
-				if (starChannel !is TextChannel) return // misconfigured
-				val reactUsers = event.reaction.retrieveUsers().complete()
-				if (reactUsers.contains(jda.selfUser)) {
-					return // already posted to starChannel
+		if (event.channel.id != starChannelId) {
+			val emoteName = event.reactionEmote.name
+			val isCustomEmoteChar = { c: Char -> c.isJavaIdentifierPart() || c == '-' }
+			if (emoteName == Emotes.star || emoteName == Emotes.joy || emoteName.all(isCustomEmoteChar)) {
+				val starredMsg = event.channel.retrieveMessageById(event.reaction.messageId).complete()
+				val reaction = starredMsg.reactions.firstOrNull { it.reactionEmote.name == emoteName } ?: return
+				if (reaction.count >= 4) {
+					starChannelId ?: return
+					val starChannel = jda.getGuildChannelById(starChannelId)
+					if (starChannel !is TextChannel) return // misconfigured
+
+					// if we already reacted to starredMsg with a star, don't repost again
+					val starringUsers = starredMsg.reactions.first { it.reactionEmote.name == Emotes.star }
+						?.retrieveUsers()?.complete()
+					if (starringUsers != null && jda.selfUser in starringUsers) {
+						return // already posted to starChannel
+					}
+
+					event.channel.addReactionById(event.messageId, Emotes.star).complete()
+					val embed = EmbedBuilder()
+						.setColor(Color.YELLOW)
+						.setAuthor(starredMsg.author.asTag, starredMsg.jumpUrl, starredMsg.author.avatarUrl)
+						.setDescription(starredMsg.contentRaw)
+						.setTimestamp(starredMsg.timeCreated)
+					starredMsg.attachments.firstOrNull { it.isImage }
+						?.also { embed.setImage(it.url) }
+					if (event.reactionEmote.isEmote) {
+						val emote = event.guild.retrieveEmote(event.reactionEmote.emote).complete()
+						if (emote != null) embed.setFooter(zeroWidthSpace, emote.imageUrl)
+					}
+					starChannel.sendMessage(embed.build()).queue()
 				}
-				event.channel.addReactionById(event.messageId, Emotes.star).complete()
-				val embed = EmbedBuilder()
-					.setColor(Color.YELLOW)
-					.setAuthor(starredMsg.author.asTag, starredMsg.jumpUrl, starredMsg.author.avatarUrl)
-					.setDescription(starredMsg.contentRaw)
-					.setTimestamp(starredMsg.timeCreated)
-				starredMsg.attachments.firstOrNull { it.isImage }
-					?.also { embed.setImage(it.url) }
-				if (event.reactionEmote.isEmote) {
-					val emote = event.guild.retrieveEmote(event.reactionEmote.emote).complete()
-					if (emote != null) embed.setFooter(zeroWidthSpace, emote.imageUrl)
-				}
-				starChannel.sendMessage(embed.build()).queue()
+				return
 			}
-			return
 		}
 	}
 
