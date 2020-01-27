@@ -18,3 +18,16 @@ Configure by setting environment variables:
 Start the server:
 
     java -cp "build/install/newsroom/lib/*" io.github.gjum.discord.newsroom.MainKt
+
+### Run with Docker
+
+Create a `.env` file containing the environment variables above.
+
+Then build and start the container:
+
+    ./gradlew installDist
+	docker-compose up -d --build
+
+To see the application logs:
+
+	docker-compose logs -tf
