@@ -10,3 +10,8 @@
 .*
 *.sqlite
 *.db
+*.tar
+*.tar.gz
+*.env
+*.yml
+*.yaml
