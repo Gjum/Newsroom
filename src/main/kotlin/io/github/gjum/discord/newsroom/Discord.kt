@@ -161,7 +161,7 @@ class Discord(private val db: Database) : ListenerAdapter() {
 					if (starChannel !is TextChannel) return // misconfigured
 
 					// if we already reacted to starredMsg with a star, don't repost again
-					val starringUsers = starredMsg.reactions.first { it.reactionEmote.name == Emotes.star }
+					val starringUsers = starredMsg.reactions.firstOrNull { it.reactionEmote.name == Emotes.star }
 						?.retrieveUsers()?.complete()
 					if (starringUsers != null && jda.selfUser in starringUsers) {
 						return // already posted to starChannel
